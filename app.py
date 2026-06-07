@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 import re
@@ -112,6 +113,57 @@ DIAS = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-
 BRT = timezone(timedelta(hours=-3))
 
 
+def timer_html(segundos: int) -> str:
+    return f"""
+<div style="background:#0d1f0d;border:1px solid #39ff1444;border-radius:12px;padding:16px;text-align:center;font-family:monospace">
+  <div id="display" style="font-size:3rem;color:#39ff14;font-weight:bold">
+    {segundos//60:02d}:{segundos%60:02d}
+  </div>
+  <div style="color:#8aff8a;font-size:0.8rem;margin-bottom:12px">⏱️ Descanso</div>
+  <button onclick="toggle()" id="btn"
+    style="background:linear-gradient(135deg,#1a4a1a,#2d7a2d);color:#39ff14;border:1px solid #39ff1466;
+           border-radius:8px;padding:8px 24px;font-size:1rem;font-weight:700;cursor:pointer;margin-right:8px">
+    ▶ Iniciar
+  </button>
+  <button onclick="reset()"
+    style="background:#141e2b;color:#8aff8a;border:1px solid #2a3f2a;
+           border-radius:8px;padding:8px 16px;font-size:1rem;cursor:pointer">
+    ↺
+  </button>
+</div>
+<script>
+  var total={segundos}, left={segundos}, iv=null, running=false;
+  function fmt(s){{return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}}
+  function beep(){{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,0.4,0.8].forEach(function(t){{
+      var o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value=880; o.type='sine';
+      g.gain.setValueAtTime(0.6,ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.35);
+      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.35);
+    }});
+  }}
+  function toggle(){{
+    if(running){{clearInterval(iv);running=false;document.getElementById('btn').innerHTML='▶ Continuar';}}
+    else{{
+      if(left<=0)return;
+      running=true;document.getElementById('btn').innerHTML='⏸ Pausar';
+      iv=setInterval(function(){{
+        left--;document.getElementById('display').innerHTML=fmt(left);
+        if(left<=0){{clearInterval(iv);running=false;document.getElementById('btn').innerHTML='✅ Feito';
+          document.getElementById('display').style.color='#fff';beep();}}
+      }},1000);
+    }}
+  }}
+  function reset(){{clearInterval(iv);running=false;left=total;
+    document.getElementById('display').innerHTML=fmt(total);
+    document.getElementById('display').style.color='#39ff14';
+    document.getElementById('btn').innerHTML='▶ Iniciar';}}
+</script>"""
+
+
 def hoje_brt():
     return datetime.now(BRT).strftime("%Y-%m-%d")
 
@@ -175,8 +227,9 @@ def carregar_todos_treinos(url):
         if dia_atual and len(row) >= 3:
             exercicio = str(row.iloc[1]).strip()
             series    = str(row.iloc[2]).strip()
+            descanso  = str(row.iloc[3]).strip() if len(row) >= 4 else ""
             if exercicio not in ("", "nan"):
-                treinos[dia_atual].append({"Exercicio": exercicio, "Series": series})
+                treinos[dia_atual].append({"Exercicio": exercicio, "Series": series, "Descanso": descanso})
 
     return treinos
 
@@ -219,6 +272,8 @@ if dia_selecionado != "Selecione...":
         for i, ex in enumerate(exercicios):
             item     = ex["Exercicio"].strip()
             alvo     = ex["Series"]
+            descanso = ex.get("Descanso", "")
+            seg_desc = int(extrair_kg(descanso) or 90)
             ja_feito = item in feitos_hoje
             titulo   = f"✅ FEITO — {item}" if ja_feito else f"🏋️ {item}"
 
@@ -242,6 +297,8 @@ if dia_selecionado != "Selecione...":
                     carga = st.text_input("Carga Atual",   key=f"carga_{i}", placeholder="Ex: 40kg")
                 with c2:
                     obs   = st.text_input("Nota / Séries", key=f"obs_{i}",   placeholder="Ex: RPE 9")
+
+                components.html(timer_html(seg_desc), height=140)
 
                 if st.button("💾 Salvar", key=f"salvar_{i}"):
                     if not carga.strip():
