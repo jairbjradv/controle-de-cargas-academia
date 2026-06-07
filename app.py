@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 from supabase import create_client
 
@@ -11,10 +11,23 @@ URL_TREINOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRoxuS5Rs5YY_kxRq
 
 DIAS = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA"]
 
+# Fix #2 — timezone BRT em vez de servidor UTC
+BRT = timezone(timedelta(hours=-3))
 
+
+def hoje_brt():
+    return datetime.now(BRT).strftime("%Y-%m-%d")
+
+
+# Fix #7 — extrair_kg com try/except para typos como "40.5.0"
 def extrair_kg(valor):
     m = re.search(r'[\d,.]+', str(valor))
-    return float(m.group().replace(',', '.')) if m else None
+    if not m:
+        return None
+    try:
+        return float(m.group().replace(',', '.'))
+    except ValueError:
+        return None
 
 
 @st.cache_resource
@@ -25,10 +38,15 @@ def get_supabase():
     )
 
 
+# Fix #3 — cache de 30s para não bater no Supabase a cada clique
+@st.cache_data(ttl=30)
 def carregar_historico():
     resp = get_supabase().table("historico_cargas").select("*").order("data").execute()
     if resp.data:
-        return pd.DataFrame(resp.data)
+        df = pd.DataFrame(resp.data)
+        # Fix #6 — normaliza data para "YYYY-MM-DD" independente do formato retornado
+        df["data"] = df["data"].astype(str).str[:10]
+        return df
     return pd.DataFrame(columns=["id", "data", "treino", "exercicio", "carga", "observacao"])
 
 
@@ -66,14 +84,20 @@ def carregar_todos_treinos(url):
     return treinos
 
 
-# ── Carrega dados ────────────────────────────────────────────────────────────
+# ── Carrega dados — Fix #4: uma única chamada ao Supabase por render ─────────
 treinos      = carregar_todos_treinos(URL_TREINOS)
 df_historico = carregar_historico()
 
 # ── Seleção do dia ───────────────────────────────────────────────────────────
+_DIA_SEMANA = {0: "SEGUNDA-FEIRA", 1: "TERÇA-FEIRA", 2: "QUARTA-FEIRA", 3: "QUINTA-FEIRA", 4: "SEXTA-FEIRA", 5: "SÁBADO", 6: "DOMINGO"}
+_opcoes     = ["Selecione..."] + list(treinos.keys())
+_dia_hoje   = _DIA_SEMANA.get(datetime.now(BRT).weekday())
+_idx        = _opcoes.index(_dia_hoje) if _dia_hoje in _opcoes else 0
+
 dia_selecionado = st.selectbox(
     "Selecione o Treino do Dia:",
-    ["Selecione..."] + list(treinos.keys())
+    _opcoes,
+    index=_idx
 )
 
 if dia_selecionado != "Selecione...":
@@ -82,7 +106,7 @@ if dia_selecionado != "Selecione...":
     if not exercicios:
         st.warning("Nenhum exercício encontrado para este dia.")
     else:
-        hoje_str = datetime.today().strftime("%Y-%m-%d")
+        hoje_str = hoje_brt()
         total    = len(exercicios)
 
         feitos_hoje = [
@@ -131,22 +155,27 @@ if dia_selecionado != "Selecione...":
                                   if not df_historico.empty else pd.Series(dtype=float)
                         eh_pr   = novo_kg is not None and (valores.empty or novo_kg > valores.max())
 
-                        get_supabase().table("historico_cargas").insert({
-                            "data":       hoje_str,
-                            "treino":     dia_selecionado,
-                            "exercicio":  item,
-                            "carga":      carga.strip(),
-                            "observacao": obs.strip() or None,
-                        }).execute()
+                        # Fix #1 — try/except no insert
+                        try:
+                            get_supabase().table("historico_cargas").insert({
+                                "data":       hoje_str,
+                                "treino":     dia_selecionado,
+                                "exercicio":  item,
+                                "carga":      carga.strip(),
+                                "observacao": obs.strip() or None,
+                            }).execute()
+                            carregar_historico.clear()
+                            if eh_pr:
+                                st.toast(f"🏆 PR em {item}!", icon="🏆")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Erro ao salvar — tente novamente. ({e})")
 
-                        if eh_pr:
-                            st.toast(f"🏆 PR em {item}!", icon="🏆")
-                        st.rerun()
-
-# ── Apagar registro ──────────────────────────────────────────────────────────
+# ── Apagar registro — Fix #4: reutiliza df_historico já carregado ────────────
 st.markdown("---")
 with st.expander("🗑️ Apagar registro incorreto"):
-    df_del = carregar_historico()
+    # Fix #4 — sem segunda chamada ao Supabase
+    df_del = df_historico
 
     if df_del.empty:
         st.info("Nenhum registro salvo ainda.")
@@ -163,8 +192,10 @@ with st.expander("🗑️ Apagar registro incorreto"):
                 (df_del["treino"]    == dia_del) &
                 (df_del["exercicio"] == ex_del)
             ].copy()
+
+            # Fix #8 — label único com ID para evitar duplicatas de mesma carga/data
             registros["Label"] = registros.apply(
-                lambda r: f"{pd.to_datetime(r['data']).strftime('%d/%m/%Y')}  →  {r['carga']}"
+                lambda r: f"[#{int(r['id'])}] {pd.to_datetime(r['data']).strftime('%d/%m/%Y')}  →  {r['carga']}"
                           + (f"  ({r['observacao']})" if pd.notna(r["observacao"]) and str(r["observacao"]).strip() else ""),
                 axis=1
             )
@@ -172,21 +203,32 @@ with st.expander("🗑️ Apagar registro incorreto"):
             id_del    = int(registros[registros["Label"] == escolhido].iloc[0]["id"])
 
             if st.button("🗑️ Apagar este registro", key="btn_apagar"):
-                st.session_state["confirmar_apagar"] = id_del
+                # Fix #5 — armazena id E label juntos para detectar troca de seleção
+                st.session_state["confirmar_apagar"] = {"id": id_del, "label": escolhido}
 
-            if st.session_state.get("confirmar_apagar") is not None:
-                st.warning(f"⚠️ Confirma a exclusão de **{escolhido}**?")
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button("✅ Sim, apagar", key="btn_sim"):
-                        get_supabase().table("historico_cargas").delete().eq("id", st.session_state["confirmar_apagar"]).execute()
-                        st.session_state["confirmar_apagar"] = None
-                        st.success("Registro apagado.")
-                        st.rerun()
-                with c2:
-                    if st.button("❌ Cancelar", key="btn_nao"):
-                        st.session_state["confirmar_apagar"] = None
-                        st.rerun()
+            conf = st.session_state.get("confirmar_apagar")
+            if conf is not None:
+                # Fix #5 — se o usuário mudou a seleção, cancela confirmação anterior
+                if conf["id"] != id_del:
+                    st.session_state["confirmar_apagar"] = None
+                else:
+                    st.warning(f"⚠️ Confirma a exclusão de **{conf['label']}**?")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("✅ Sim, apagar", key="btn_sim"):
+                            # Fix #1 — try/except no delete
+                            try:
+                                get_supabase().table("historico_cargas").delete().eq("id", conf["id"]).execute()
+                                st.session_state["confirmar_apagar"] = None
+                                carregar_historico.clear()
+                                st.success("Registro apagado.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Erro ao apagar — tente novamente. ({e})")
+                    with c2:
+                        if st.button("❌ Cancelar", key="btn_nao"):
+                            st.session_state["confirmar_apagar"] = None
+                            st.rerun()
 
 # ── Gráfico de evolução ──────────────────────────────────────────────────────
 st.markdown("---")
@@ -205,13 +247,13 @@ else:
     if not exs_disp:
         st.info(f"Nenhum registro salvo para {dia_grafico} ainda.")
     elif ex_grafico:
-        corte   = datetime.today() - timedelta(days=30)
+        corte   = datetime.now(BRT) - timedelta(days=30)
         df_plot = df_historico[
             (df_historico["treino"]    == dia_grafico) &
             (df_historico["exercicio"] == ex_grafico)
         ].copy()
         df_plot["data"] = pd.to_datetime(df_plot["data"])
-        df_plot = df_plot[df_plot["data"] >= corte].copy()
+        df_plot = df_plot[df_plot["data"] >= corte.replace(tzinfo=None)].copy()
         df_plot["Kg"]   = df_plot["carga"].apply(extrair_kg)
         df_plot = df_plot.dropna(subset=["Kg"]).sort_values("data")
 
