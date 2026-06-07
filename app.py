@@ -115,19 +115,19 @@ BRT = timezone(timedelta(hours=-3))
 
 def timer_html(segundos: int) -> str:
     return f"""
-<div style="background:#0d1f0d;border:1px solid #39ff1444;border-radius:12px;padding:16px;text-align:center;font-family:monospace">
-  <div id="display" style="font-size:3rem;color:#39ff14;font-weight:bold">
-    {segundos//60:02d}:{segundos%60:02d}
+<div style="background:#0d1f0d;border:1px solid #39ff1444;border-radius:10px;padding:8px 16px;display:flex;align-items:center;gap:16px;font-family:monospace">
+  <div>
+    <div style="font-size:0.7rem;color:#8aff8a;">⏱️ Descanso</div>
+    <div id="display" style="font-size:1.8rem;color:#39ff14;font-weight:bold;line-height:1.1">{segundos//60:02d}:{segundos%60:02d}</div>
   </div>
-  <div style="color:#8aff8a;font-size:0.8rem;margin-bottom:12px">⏱️ Descanso</div>
   <button onclick="toggle()" id="btn"
     style="background:linear-gradient(135deg,#1a4a1a,#2d7a2d);color:#39ff14;border:1px solid #39ff1466;
-           border-radius:8px;padding:8px 24px;font-size:1rem;font-weight:700;cursor:pointer;margin-right:8px">
+           border-radius:8px;padding:6px 18px;font-size:0.85rem;font-weight:700;cursor:pointer">
     ▶ Iniciar
   </button>
   <button onclick="reset()"
     style="background:#141e2b;color:#8aff8a;border:1px solid #2a3f2a;
-           border-radius:8px;padding:8px 16px;font-size:1rem;cursor:pointer">
+           border-radius:8px;padding:6px 12px;font-size:0.85rem;cursor:pointer">
     ↺
   </button>
 </div>
@@ -298,7 +298,7 @@ if dia_selecionado != "Selecione...":
                 with c2:
                     obs   = st.text_input("Nota / Séries", key=f"obs_{i}",   placeholder="Ex: RPE 9")
 
-                components.html(timer_html(seg_desc), height=140)
+                components.html(timer_html(seg_desc), height=70)
 
                 if st.button("💾 Salvar", key=f"salvar_{i}"):
                     if not carga.strip():
