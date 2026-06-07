@@ -4,7 +4,104 @@ from datetime import datetime, timedelta, timezone
 import re
 from supabase import create_client
 
-st.set_page_config(page_title="DataGym Pro", layout="centered")
+st.set_page_config(page_title="DataGym Pro", layout="centered", page_icon="🏋️")
+
+st.markdown("""
+<style>
+/* ── Fundo geral ── */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(160deg, #0d1117 0%, #0f1923 50%, #0d1117 100%);
+    min-height: 100vh;
+}
+[data-testid="stHeader"] { background: transparent; }
+
+/* ── Título ── */
+h1 { color: #39ff14 !important; letter-spacing: 1px; }
+h2 { color: #c8ffc8 !important; }
+
+/* ── Selectbox ── */
+[data-testid="stSelectbox"] label { color: #8aff8a !important; font-weight: 600; }
+[data-testid="stSelectbox"] > div > div {
+    background-color: #1a2332 !important;
+    border: 1px solid #39ff1455 !important;
+    border-radius: 10px !important;
+    color: #e0ffe0 !important;
+}
+
+/* ── Expanders (cards de exercício) ── */
+[data-testid="stExpander"] {
+    background-color: #141e2b !important;
+    border: 1px solid #2a3f2a !important;
+    border-radius: 12px !important;
+    margin-bottom: 8px !important;
+}
+[data-testid="stExpander"]:hover {
+    border-color: #39ff1477 !important;
+    box-shadow: 0 0 12px #39ff1422;
+}
+[data-testid="stExpander"] summary {
+    color: #d4ffd4 !important;
+    font-weight: 600;
+    font-size: 0.97rem;
+}
+
+/* ── Inputs ── */
+[data-testid="stTextInput"] label { color: #8aff8a !important; font-size: 0.85rem; }
+[data-testid="stTextInput"] input {
+    background-color: #1a2332 !important;
+    border: 1px solid #2a4a2a !important;
+    border-radius: 8px !important;
+    color: #e8ffe8 !important;
+}
+[data-testid="stTextInput"] input:focus {
+    border-color: #39ff14 !important;
+    box-shadow: 0 0 6px #39ff1444 !important;
+}
+
+/* ── Botão Salvar ── */
+[data-testid="stButton"] button {
+    background: linear-gradient(135deg, #1a4a1a, #2d7a2d) !important;
+    color: #39ff14 !important;
+    border: 1px solid #39ff1466 !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease;
+}
+[data-testid="stButton"] button:hover {
+    background: linear-gradient(135deg, #2d7a2d, #3a9a3a) !important;
+    box-shadow: 0 0 14px #39ff1455 !important;
+    transform: translateY(-1px);
+}
+
+/* ── Mensagens ── */
+[data-testid="stAlert"] {
+    background-color: #111c11 !important;
+    border-left-color: #39ff14 !important;
+    border-radius: 8px !important;
+    color: #c8ffc8 !important;
+}
+
+/* ── Métrica (PR) ── */
+[data-testid="stMetric"] {
+    background: linear-gradient(135deg, #0d1f0d, #142814) !important;
+    border: 1px solid #39ff1444 !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+}
+[data-testid="stMetricLabel"] { color: #8aff8a !important; }
+[data-testid="stMetricValue"] { color: #39ff14 !important; }
+
+/* ── Divisor ── */
+hr { border-color: #1e3a1e !important; }
+
+/* ── Gráfico ── */
+[data-testid="stVegaLiteChart"] { border-radius: 12px; }
+
+/* ── Caption / info ── */
+[data-testid="stCaptionContainer"] { color: #556655 !important; }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🏋️‍♂️ Meu Diário de Cargas")
 
 URL_TREINOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRoxuS5Rs5YY_kxRqMceEMSpiXmqsxsTyNjBW4avhGnttHpS7vuWvXVjsz1LwCAhA/pub?gid=649998402&single=true&output=csv"
