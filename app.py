@@ -442,7 +442,6 @@ else:
 
             fig.update_layout(
                 template="plotly_dark",
-                colorway=["#39ff14"],
                 paper_bgcolor="#0d1117",
                 plot_bgcolor="#0a180a",
                 font=dict(color="#8aff8a", family="monospace"),
