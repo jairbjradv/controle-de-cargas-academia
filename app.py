@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime, timedelta, timezone
 import re
@@ -414,11 +415,45 @@ else:
         if df_plot.empty:
             st.info("Sem valores numéricos para plotar.")
         else:
-            df_plot["Data_str"] = df_plot["data"].dt.strftime("%d/%m")
             maximo = df_plot["Kg"].max()
             st.metric(
                 label=f"🏆 PR — {ex_grafico}",
                 value=f"{maximo:.1f} kg",
                 delta=f"{df_plot['Kg'].iloc[-1] - df_plot['Kg'].iloc[-2]:.1f} kg vs anterior" if len(df_plot) >= 2 else None
             )
-            st.line_chart(df_plot.set_index("Data_str")["Kg"], use_container_width=True)
+
+            fig = go.Figure()
+
+            # Área sombreada
+            fig.add_trace(go.Scatter(
+                x=df_plot["data"].dt.strftime("%d/%m"),
+                y=df_plot["Kg"],
+                fill="tozeroy",
+                fillcolor="rgba(57,255,20,0.07)",
+                line=dict(color="#39ff14", width=2.5),
+                mode="lines+markers",
+                marker=dict(size=8, color="#39ff14", line=dict(color="#0d1f0d", width=2)),
+                hovertemplate="<b>%{x}</b><br>%{y:.1f} kg<extra></extra>",
+            ))
+
+            fig.update_layout(
+                paper_bgcolor="#0d1117",
+                plot_bgcolor="#0d1f0d",
+                font=dict(color="#8aff8a"),
+                margin=dict(l=8, r=8, t=8, b=8),
+                height=260,
+                xaxis=dict(
+                    showgrid=True, gridcolor="#1a3a1a",
+                    tickfont=dict(color="#8aff8a"),
+                    linecolor="#2a4a2a",
+                ),
+                yaxis=dict(
+                    showgrid=True, gridcolor="#1a3a1a",
+                    tickfont=dict(color="#8aff8a"),
+                    ticksuffix=" kg",
+                    linecolor="#2a4a2a",
+                ),
+                hoverlabel=dict(bgcolor="#141e2b", font_color="#39ff14", bordercolor="#39ff1466"),
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
