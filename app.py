@@ -422,38 +422,61 @@ else:
                 delta=f"{df_plot['Kg'].iloc[-1] - df_plot['Kg'].iloc[-2]:.1f} kg vs anterior" if len(df_plot) >= 2 else None
             )
 
+            y_min = max(0, df_plot["Kg"].min() * 0.9)
+            y_max = df_plot["Kg"].max() * 1.12
+
             fig = go.Figure()
 
-            # Área sombreada
+            # Área sombreada (trace base transparente)
             fig.add_trace(go.Scatter(
                 x=df_plot["data"].dt.strftime("%d/%m"),
                 y=df_plot["Kg"],
                 fill="tozeroy",
-                fillcolor="rgba(57,255,20,0.07)",
-                line=dict(color="#39ff14", width=2.5),
+                fillcolor="rgba(57,255,20,0.08)",
+                line=dict(color="rgba(0,0,0,0)"),
+                showlegend=False,
+                hoverinfo="skip",
+            ))
+
+            # Linha principal
+            fig.add_trace(go.Scatter(
+                x=df_plot["data"].dt.strftime("%d/%m"),
+                y=df_plot["Kg"],
                 mode="lines+markers",
-                marker=dict(size=8, color="#39ff14", line=dict(color="#0d1f0d", width=2)),
-                hovertemplate="<b>%{x}</b><br>%{y:.1f} kg<extra></extra>",
+                line=dict(color="#39ff14", width=2.5),
+                marker=dict(size=9, color="#39ff14", line=dict(color="#0d1117", width=2)),
+                hovertemplate="<b>%{x}</b><br><b>%{y:.1f} kg</b><extra></extra>",
+                showlegend=False,
             ))
 
             fig.update_layout(
+                template="plotly_dark",
                 paper_bgcolor="#0d1117",
-                plot_bgcolor="#0d1f0d",
-                font=dict(color="#8aff8a"),
-                margin=dict(l=8, r=8, t=8, b=8),
+                plot_bgcolor="#0a180a",
+                font=dict(color="#8aff8a", family="monospace"),
+                margin=dict(l=12, r=12, t=12, b=12),
                 height=260,
                 xaxis=dict(
-                    showgrid=True, gridcolor="#1a3a1a",
-                    tickfont=dict(color="#8aff8a"),
-                    linecolor="#2a4a2a",
+                    showgrid=False,
+                    tickfont=dict(color="#8aff8a", size=11),
+                    linecolor="#1e3a1e",
+                    tickcolor="#1e3a1e",
                 ),
                 yaxis=dict(
-                    showgrid=True, gridcolor="#1a3a1a",
-                    tickfont=dict(color="#8aff8a"),
+                    showgrid=True,
+                    gridcolor="#1a2e1a",
+                    tickfont=dict(color="#8aff8a", size=11),
                     ticksuffix=" kg",
-                    linecolor="#2a4a2a",
+                    linecolor="#1e3a1e",
+                    range=[y_min, y_max],
+                    zeroline=False,
                 ),
-                hoverlabel=dict(bgcolor="#141e2b", font_color="#39ff14", bordercolor="#39ff1466"),
+                hoverlabel=dict(
+                    bgcolor="#141e2b",
+                    font_color="#39ff14",
+                    bordercolor="#39ff1466",
+                    font_size=13,
+                ),
             )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
