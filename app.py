@@ -464,9 +464,8 @@ else:
                 ),
                 hoverlabel=dict(
                     bgcolor="#141e2b",
-                    font_color="#39ff14",
-                    bordercolor="#39ff1466",
-                    font_size=13,
+                    font=dict(color="#39ff14", size=13),
+                    bordercolor="rgba(57,255,20,0.4)",
                 ),
             )
 
