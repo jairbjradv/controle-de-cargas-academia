@@ -427,22 +427,13 @@ else:
 
             fig = go.Figure()
 
-            # Área sombreada (trace base transparente)
-            fig.add_trace(go.Scatter(
-                x=df_plot["data"].dt.strftime("%d/%m"),
-                y=df_plot["Kg"],
-                fill="tozeroy",
-                fillcolor="rgba(57,255,20,0.08)",
-                line=dict(color="rgba(0,0,0,0)"),
-                showlegend=False,
-                hoverinfo="skip",
-            ))
-
-            # Linha principal
+            # Trace único: linha verde + área sombreada
             fig.add_trace(go.Scatter(
                 x=df_plot["data"].dt.strftime("%d/%m"),
                 y=df_plot["Kg"],
                 mode="lines+markers",
+                fill="tozeroy",
+                fillcolor="rgba(57,255,20,0.08)",
                 line=dict(color="#39ff14", width=2.5),
                 marker=dict(size=9, color="#39ff14", line=dict(color="#0d1117", width=2)),
                 hovertemplate="<b>%{x}</b><br><b>%{y:.1f} kg</b><extra></extra>",
@@ -451,6 +442,7 @@ else:
 
             fig.update_layout(
                 template="plotly_dark",
+                colorway=["#39ff14"],
                 paper_bgcolor="#0d1117",
                 plot_bgcolor="#0a180a",
                 font=dict(color="#8aff8a", family="monospace"),
