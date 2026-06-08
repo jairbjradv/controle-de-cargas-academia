@@ -326,6 +326,54 @@ if dia_selecionado != "Selecione...":
                         except Exception as e:
                             st.error(f"❌ Erro ao salvar — tente novamente. ({e})")
 
+# ── Editar registro ───────────────────────────────────────────────────────────
+st.markdown("---")
+with st.expander("✏️ Editar registro"):
+    if df_historico.empty:
+        st.info("Nenhum registro salvo ainda.")
+    else:
+        col1, col2 = st.columns(2)
+        with col1:
+            dia_edit = st.selectbox("Dia", DIAS, key="dia_edit")
+        with col2:
+            exs_edit = sorted(df_historico[df_historico["treino"] == dia_edit]["exercicio"].unique().tolist())
+            ex_edit  = st.selectbox("Exercício", exs_edit, key="ex_edit") if exs_edit else None
+
+        if ex_edit:
+            regs_edit = df_historico[
+                (df_historico["treino"]    == dia_edit) &
+                (df_historico["exercicio"] == ex_edit)
+            ].copy()
+            regs_edit["Label"] = regs_edit.apply(
+                lambda r: f"[#{int(r['id'])}] {pd.to_datetime(r['data']).strftime('%d/%m/%Y')}  →  {r['carga']}"
+                          + (f"  ({r['observacao']})" if pd.notna(r["observacao"]) and str(r["observacao"]).strip() else ""),
+                axis=1
+            )
+            escolhido_edit = st.selectbox("Registro a editar", regs_edit["Label"].tolist(), key="reg_edit")
+            row_edit       = regs_edit[regs_edit["Label"] == escolhido_edit].iloc[0]
+            id_edit        = int(row_edit["id"])
+
+            c1, c2 = st.columns(2)
+            with c1:
+                nova_carga = st.text_input("Nova carga", value=str(row_edit["carga"]), key="edit_carga")
+            with c2:
+                nova_obs   = st.text_input("Nova nota", value=str(row_edit["observacao"]) if pd.notna(row_edit["observacao"]) else "", key="edit_obs")
+
+            if st.button("💾 Salvar edição", key="btn_salvar_edit"):
+                if not nova_carga.strip():
+                    st.warning("A carga não pode ficar vazia.")
+                else:
+                    try:
+                        get_supabase().table("historico_cargas").update({
+                            "carga":      nova_carga.strip(),
+                            "observacao": nova_obs.strip() or None,
+                        }).eq("id", id_edit).execute()
+                        carregar_historico.clear()
+                        st.success("✅ Registro atualizado!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao editar — tente novamente. ({e})")
+
 # ── Apagar registro — Fix #4: reutiliza df_historico já carregado ────────────
 st.markdown("---")
 with st.expander("🗑️ Apagar registro incorreto"):
