@@ -92,6 +92,15 @@ h2 { color: #c8ffc8 !important; }
     font-weight: 700 !important;
 }
 
+/* ── Linha de botões do exercício: não empilha no celular ── */
+[class*="st-key-botoes_"] [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+}
+[class*="st-key-botoes_"] [data-testid="stHorizontalBlock"] > div {
+    min-width: 0 !important;
+}
+
 /* ── Barra de progresso ── */
 [data-testid="stProgress"] > div > div > div > div {
     background: linear-gradient(90deg, #2d7a2d, #39ff14) !important;
@@ -308,16 +317,18 @@ with tab_treino:
                     ultima = hist.iloc[-1] if not hist.empty else None
                     video  = ex.get("Video", "")
 
-                    b1, b2, b3 = st.columns([2, 2, 1])
-                    with b1:
-                        salvar_clicado = st.button("💾 Salvar", key=f"salvar_{i}")
-                    with b2:
-                        repetir_clicado = ultima is not None and st.button(
-                            f"↻ Repetir {ultima['carga']}", key=f"rep_{i}"
-                        )
-                    with b3:
-                        if video:
-                            st.link_button("🎥", video)
+                    # container com key permite CSS que mantém os botões lado a lado no celular
+                    with st.container(key=f"botoes_{i}"):
+                        b1, b2, b3 = st.columns([2, 2, 1])
+                        with b1:
+                            salvar_clicado = st.button("💾 Salvar", key=f"salvar_{i}", use_container_width=True)
+                        with b2:
+                            repetir_clicado = ultima is not None and st.button(
+                                f"↻ Repetir {ultima['carga']}", key=f"rep_{i}", use_container_width=True
+                            )
+                        with b3:
+                            if video:
+                                st.link_button("🎥", video, use_container_width=True)
 
                     # Repetir última carga com 1 toque (copia carga + nota da última sessão)
                     if repetir_clicado:
