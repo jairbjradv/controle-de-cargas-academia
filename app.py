@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import pandas as pd
 from datetime import datetime, timedelta, timezone
@@ -126,60 +125,19 @@ DIAS = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-
 # Fix #2 — timezone BRT em vez de servidor UTC
 BRT = timezone(timedelta(hours=-3))
 
-# Cores para comparar exercícios no gráfico
-CORES_GRAFICO = ["#39ff14", "#00e5ff", "#ffb000"]
-
-
-def timer_html(segundos: int) -> str:
-    return f"""
-<div style="background:#0d1f0d;border:1px solid #39ff1444;border-radius:10px;padding:8px 16px;display:flex;align-items:center;gap:16px;font-family:monospace">
-  <div>
-    <div style="font-size:0.7rem;color:#8aff8a;">⏱️ Descanso</div>
-    <div id="display" style="font-size:1.8rem;color:#39ff14;font-weight:bold;line-height:1.1">{segundos//60:02d}:{segundos%60:02d}</div>
-  </div>
-  <button onclick="toggle()" id="btn"
-    style="background:linear-gradient(135deg,#1a4a1a,#2d7a2d);color:#39ff14;border:1px solid #39ff1466;
-           border-radius:8px;padding:6px 18px;font-size:0.85rem;font-weight:700;cursor:pointer">
-    ▶ Iniciar
-  </button>
-  <button onclick="reset()"
-    style="background:#141e2b;color:#8aff8a;border:1px solid #2a3f2a;
-           border-radius:8px;padding:6px 12px;font-size:0.85rem;cursor:pointer">
-    ↺
-  </button>
-</div>
-<script>
-  var total={segundos}, left={segundos}, iv=null, running=false;
-  function fmt(s){{return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}}
-  function beep(){{
-    var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [0,0.4,0.8].forEach(function(t){{
-      var o=ctx.createOscillator(), g=ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value=880; o.type='sine';
-      g.gain.setValueAtTime(0.8,ctx.currentTime+t);
-      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.35);
-      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.35);
-    }});
-    if(navigator.vibrate){{navigator.vibrate([300,150,300,150,400]);}}
-  }}
-  function toggle(){{
-    if(running){{clearInterval(iv);running=false;document.getElementById('btn').innerHTML='▶ Continuar';}}
-    else{{
-      if(left<=0)return;
-      running=true;document.getElementById('btn').innerHTML='⏸ Pausar';
-      iv=setInterval(function(){{
-        left--;document.getElementById('display').innerHTML=fmt(left);
-        if(left<=0){{clearInterval(iv);running=false;document.getElementById('btn').innerHTML='✅ Feito';
-          document.getElementById('display').style.color='#fff';beep();}}
-      }},1000);
-    }}
-  }}
-  function reset(){{clearInterval(iv);running=false;left=total;
-    document.getElementById('display').innerHTML=fmt(total);
-    document.getElementById('display').style.color='#39ff14';
-    document.getElementById('btn').innerHTML='▶ Iniciar';}}
-</script>"""
+# Cores para comparar exercícios no gráfico (até 10)
+CORES_GRAFICO = [
+    "#39ff14",  # verde neon
+    "#00e5ff",  # ciano
+    "#ffb000",  # âmbar
+    "#ff4d6d",  # rosa
+    "#b366ff",  # roxo
+    "#ff8c42",  # laranja
+    "#14ffc8",  # turquesa
+    "#ffe45e",  # amarelo
+    "#4d9fff",  # azul
+    "#ff66d9",  # magenta
+]
 
 
 def hoje_brt():
@@ -313,8 +271,6 @@ with tab_treino:
             for i, ex in enumerate(exercicios):
                 item     = ex["Exercicio"].strip()
                 alvo     = ex["Series"]
-                descanso = ex.get("Descanso", "")
-                seg_desc = int(extrair_kg(descanso) or 90)
                 ja_feito = item in feitos_hoje
                 titulo   = f"✅ FEITO — {item}" if ja_feito else f"🏋️ {item}"
 
@@ -338,8 +294,6 @@ with tab_treino:
                         carga = st.text_input("Carga Atual",   key=f"carga_{i}", placeholder="Ex: 40kg")
                     with c2:
                         obs   = st.text_input("Nota / Séries", key=f"obs_{i}",   placeholder="Ex: 3x12 RPE9")
-
-                    components.html(timer_html(seg_desc), height=70)
 
                     ultima = hist.iloc[-1] if not hist.empty else None
 
@@ -438,7 +392,7 @@ with tab_evolucao:
             dia_grafico = st.selectbox("Dia de treino", DIAS, key="dia_grafico")
         with col2:
             exs_disp = sorted(df_historico[df_historico["treino"] == dia_grafico]["exercicio"].unique().tolist())
-            exs_sel  = st.multiselect("Exercícios (até 3)", exs_disp, default=exs_disp[:1], max_selections=3) \
+            exs_sel  = st.multiselect("Exercícios (até 10)", exs_disp, default=exs_disp[:1], max_selections=10) \
                        if exs_disp else []
 
         if not exs_disp:
