@@ -84,6 +84,13 @@ h2 { color: #c8ffc8 !important; }
     box-shadow: 0 0 14px #39ff1455 !important;
     transform: translateY(-1px);
 }
+[data-testid="stLinkButton"] a {
+    background: linear-gradient(135deg, #1a4a1a, #2d7a2d) !important;
+    color: #39ff14 !important;
+    border: 1px solid #39ff1466 !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+}
 
 /* ── Barra de progresso ── */
 [data-testid="stProgress"] > div > div > div > div {
@@ -212,8 +219,11 @@ def carregar_todos_treinos(url):
             exercicio = str(row.iloc[1]).strip()
             series    = str(row.iloc[2]).strip()
             descanso  = str(row.iloc[3]).strip() if len(row) >= 4 else ""
+            video     = str(row.iloc[4]).strip() if len(row) >= 5 else ""
+            if not video.lower().startswith("http"):
+                video = ""
             if exercicio not in ("", "nan"):
-                treinos[dia_atual].append({"Exercicio": exercicio, "Series": series, "Descanso": descanso})
+                treinos[dia_atual].append({"Exercicio": exercicio, "Series": series, "Descanso": descanso, "Video": video})
 
     return treinos
 
@@ -296,14 +306,18 @@ with tab_treino:
                         obs   = st.text_input("Nota / Séries", key=f"obs_{i}",   placeholder="Ex: 3x12 RPE9")
 
                     ultima = hist.iloc[-1] if not hist.empty else None
+                    video  = ex.get("Video", "")
 
-                    b1, b2 = st.columns(2)
+                    b1, b2, b3 = st.columns([2, 2, 1])
                     with b1:
                         salvar_clicado = st.button("💾 Salvar", key=f"salvar_{i}")
                     with b2:
                         repetir_clicado = ultima is not None and st.button(
                             f"↻ Repetir {ultima['carga']}", key=f"rep_{i}"
                         )
+                    with b3:
+                        if video:
+                            st.link_button("🎥", video)
 
                     # Repetir última carga com 1 toque (copia carga + nota da última sessão)
                     if repetir_clicado:
