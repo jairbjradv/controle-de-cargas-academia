@@ -55,6 +55,14 @@ h2 { color: #c8ffc8 !important; }
     color: #d4ffd4 !important;
     font-weight: 600;
     font-size: 0.97rem;
+    background-color: #141e2b !important;
+}
+[data-testid="stExpander"] summary:hover,
+[data-testid="stExpander"] details[open] summary {
+    background-color: #141e2b !important;
+}
+[data-testid="stExpander"] details {
+    background-color: #141e2b !important;
 }
 
 /* ── Inputs ── */
