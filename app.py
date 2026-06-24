@@ -132,9 +132,39 @@ hr { border-color: #1e3a1e !important; }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🏋️‍♂️ Meu Diário de Cargas")
+USUARIOS = {
+    "jair": {
+        "nome": "Jair",
+        "url_treinos": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRoxuS5Rs5YY_kxRqMceEMSpiXmqsxsTyNjBW4avhGnttHpS7vuWvXVjsz1LwCAhA/pub?gid=649998402&single=true&output=csv",
+    },
+    "tamy": {
+        "nome": "Tamy",
+        "url_treinos": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSvZX7fmgtyhVPKeQiv0tNXtjvq3YoX9QfbB-uQOzhGycfGfw4_aPwcdWy952XJsQ/pub?output=csv",
+    },
+}
 
-URL_TREINOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRoxuS5Rs5YY_kxRqMceEMSpiXmqsxsTyNjBW4avhGnttHpS7vuWvXVjsz1LwCAhA/pub?gid=649998402&single=true&output=csv"
+_u_param = st.query_params.get("u", "")
+if _u_param not in USUARIOS:
+    st.title("🏋️‍♂️ DataGym Pro")
+    st.markdown("### Quem é você?")
+    c1, c2 = st.columns(2)
+    for col, chave in zip((c1, c2), USUARIOS.keys()):
+        with col:
+            if st.button(f"👤 {USUARIOS[chave]['nome']}", key=f"escolher_{chave}", use_container_width=True):
+                st.query_params["u"] = chave
+                st.rerun()
+    st.caption("💡 Dica: depois de escolher, salve o link da página na tela inicial do celular — ele abre direto no seu treino.")
+    st.stop()
+
+usuario      = _u_param
+nome_usuario = USUARIOS[usuario]["nome"]
+
+st.title(f"🏋️‍♂️ Diário de Cargas — {nome_usuario}")
+if st.button("🔄 Trocar usuário", key="trocar_usuario"):
+    del st.query_params["u"]
+    st.rerun()
+
+URL_TREINOS = USUARIOS[usuario]["url_treinos"]
 
 DIAS = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA"]
 
@@ -189,14 +219,21 @@ def get_supabase():
 
 # Fix #3 — cache de 30s para não bater no Supabase a cada clique
 @st.cache_data(ttl=30)
-def carregar_historico():
-    resp = get_supabase().table("historico_cargas").select("*").order("data").execute()
+def carregar_historico(usuario):
+    resp = (
+        get_supabase()
+        .table("historico_cargas")
+        .select("*")
+        .eq("usuario", usuario)
+        .order("data")
+        .execute()
+    )
     if resp.data:
         df = pd.DataFrame(resp.data)
         # Fix #6 — normaliza data para "YYYY-MM-DD" independente do formato retornado
         df["data"] = df["data"].astype(str).str[:10]
         return df
-    return pd.DataFrame(columns=["id", "data", "treino", "exercicio", "carga", "observacao"])
+    return pd.DataFrame(columns=["id", "data", "treino", "exercicio", "carga", "observacao", "usuario"])
 
 
 @st.cache_data(ttl=120)
@@ -250,7 +287,7 @@ def calcular_volume(df):
 
 # ── Carrega dados — Fix #4: uma única chamada ao Supabase por render ─────────
 treinos      = carregar_todos_treinos(URL_TREINOS)
-df_historico = carregar_historico()
+df_historico = carregar_historico(usuario)
 
 tab_treino, tab_evolucao, tab_gerenciar = st.tabs(["🏋️ Treino", "📈 Evolução", "⚙️ Gerenciar"])
 
@@ -341,6 +378,7 @@ with tab_treino:
                                 "exercicio":  item,
                                 "carga":      str(ultima["carga"]).strip(),
                                 "observacao": obs_ant,
+                                "usuario":    usuario,
                             }).execute()
                             carregar_historico.clear()
                             st.toast(f"↻ {ultima['carga']} repetido em {item}")
@@ -365,6 +403,7 @@ with tab_treino:
                                     "exercicio":  item,
                                     "carga":      carga.strip(),
                                     "observacao": obs.strip() or None,
+                                    "usuario":    usuario,
                                 }).execute()
                                 carregar_historico.clear()
                                 if eh_pr:
