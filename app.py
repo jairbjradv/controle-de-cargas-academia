@@ -143,7 +143,7 @@ hr { border-color: #1e3a1e !important; }
 USUARIOS = {
     "jair": {
         "nome": "Jair",
-        "url_treinos": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32TrDQegoB6LKAUnuz7GC6OD6GM9UJvO4hmR1ZkpgOGivFNm3dBBOMbMl7UbGlA/pub?output=csv",
+        "url_treinos": "https://docs.google.com/spreadsheets/d/e/2PACX-1vREBjIB2StfM06L1i-4EB00k0Hgkd9FgN7o6musiVOjE9RVvfRU2V5I6gedteVKTw/pub?output=csv",
     },
     "tamy": {
         "nome": "Tamy",
